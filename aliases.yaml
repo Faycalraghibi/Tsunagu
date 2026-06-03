@@ -1,0 +1,11 @@
+# canonical name: [aliases]. Both sides are normalised (lowercase, singular, no punctuation).
+checkpointer: [checkpoint saver, saver, checkpointer backend, checkpointing backend]
+human-in-the-loop: [hitl, human in the loop workflow, human review]
+interrupt: [dynamic interrupt, interrupt call]
+subgraph: [sub-graph, child graph, nested graph]
+store: [memory store, long-term memory store, basestore]
+thread: [conversation thread, thread_id]
+time travel: [time-travel, replay and fork]
+durable execution: [fault tolerance, durability]
+state: [graph state, state schema]
+reducer: [reducer function, state reducer]

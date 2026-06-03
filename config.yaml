@@ -1,0 +1,87 @@
+corpus:
+  repo: langchain-ai/docs
+  commit: 23152b1133e7759381661e93bcdca778101a80bc
+  pages:
+    - src/oss/langgraph/overview.mdx
+    - src/oss/langgraph/install.mdx
+    - src/oss/langgraph/quickstart.mdx
+    - src/oss/langgraph/thinking-in-langgraph.mdx
+    - src/oss/langgraph/choosing-apis.mdx
+    - src/oss/langgraph/graph-api.mdx
+    - src/oss/langgraph/use-graph-api.mdx
+    - src/oss/langgraph/functional-api.mdx
+    - src/oss/langgraph/use-functional-api.mdx
+    - src/oss/langgraph/pregel.mdx
+    - src/oss/langgraph/persistence.mdx
+    - src/oss/langgraph/checkpointers.mdx
+    - src/oss/langgraph/stores.mdx
+    - src/oss/langgraph/add-memory.mdx
+    - src/oss/langgraph/interrupts.mdx
+    - src/oss/langgraph/use-time-travel.mdx
+    - src/oss/langgraph/fault-tolerance.mdx
+    - src/oss/langgraph/streaming.mdx
+    - src/oss/langgraph/event-streaming.mdx
+    - src/oss/langgraph/use-subgraphs.mdx
+    - src/oss/langgraph/workflows-agents.mdx
+    - src/oss/langgraph/agentic-rag.mdx
+    - src/oss/langgraph/sql-agent.mdx
+    - src/oss/langgraph/application-structure.mdx
+    - src/oss/langgraph/test.mdx
+    - src/oss/langgraph/local-server.mdx
+    - src/oss/langgraph/deploy.mdx
+    - src/oss/langgraph/studio.mdx
+    - src/oss/langgraph/observability.mdx
+    - src/oss/langgraph/ui.mdx
+    - src/oss/langgraph/backward-compatibility.mdx
+    - src/oss/langgraph/errors/GRAPH_RECURSION_LIMIT.mdx
+    - src/oss/langgraph/errors/INVALID_CHAT_HISTORY.mdx
+    - src/oss/langgraph/errors/INVALID_CONCURRENT_GRAPH_UPDATE.mdx
+    - src/oss/langgraph/errors/INVALID_GRAPH_NODE_RETURN_VALUE.mdx
+    - src/oss/langgraph/errors/MISSING_CHECKPOINTER.mdx
+    - src/oss/langgraph/errors/MULTIPLE_SUBGRAPHS.mdx
+    - src/oss/langgraph/frontend/overview.md
+    - src/oss/langgraph/frontend/graph-execution.mdx
+    - src/oss/langgraph/frontend/custom-stream-channels.mdx
+    - src/oss/concepts/memory.mdx
+    - src/oss/concepts/human-in-the-loop.mdx
+    - src/oss/concepts/context.mdx
+    - src/oss/langchain/human-in-the-loop.mdx
+    - src/oss/langchain/multi-agent/index.mdx
+    - src/oss/langchain/multi-agent/handoffs.mdx
+    - src/oss/langchain/multi-agent/custom-workflow.mdx
+
+llm:
+  provider: nvidia
+  base_url: https://integrate.api.nvidia.com/v1
+  model: nvidia/nemotron-3.5-lightning-30b-a3b
+  api_key_env: NVIDIA_API_KEY
+  temperature: 0.0
+  max_tokens: 2048
+  rpm: 35
+  timeout_s: 120
+  max_retries: 5
+  disable_thinking: true
+
+chunking:
+  target_tokens: 500
+  overlap_tokens: 50
+  max_tokens: 900
+
+retrieval:
+  top_k: 8
+  candidate_k: 20
+  rrf_k: 60
+  embed_model: BAAI/bge-small-en-v1.5
+
+graph:
+  extraction_backend: llamaindex   # set to "json" if the Task 16 spike says so
+  max_triplets_per_chunk: 10
+  merge_threshold: 0.92
+  hops: 2
+  seed_vector_k: 5
+  seed_min_sim: 0.6
+  max_expand_degree: 40
+
+evaluation:
+  repeats: 3
+  systems: [dense, hybrid, graph]
