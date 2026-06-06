@@ -63,5 +63,32 @@ def check_questions(config: Path = CONFIG_OPTION) -> None:
     raise typer.Exit(code=1 if problems else 0)
 
 
+@app.command()
+def usage(config: Path = CONFIG_OPTION) -> None:
+    """Print calls, tokens and LLM time per stage, from the cache."""
+    from tsunagu.llm import usage_by_stage
+
+    s = _settings(config)
+    for stage, values in sorted(usage_by_stage(s.paths.cache_dir).items()):
+        typer.echo(
+            f"{stage}: {values['calls']:.0f} calls, {values['prompt_tokens']:.0f} prompt + "
+            f"{values['completion_tokens']:.0f} completion tokens, {values['latency_s'] / 60:.1f} min"
+        )
+
+
+@app.command()
+def smoke(config: Path = CONFIG_OPTION) -> None:
+    """One real LLM call to check the key, the model and the cache."""
+    from tsunagu.llm import build_llm
+
+    reply = build_llm(_settings(config)).complete(
+        [{"role": "user", "content": 'Reply with the JSON {"ok": true} and nothing else.'}],
+        stage="smoke",
+    )
+    typer.echo(
+        f"{reply.text!r} cached={reply.cached} tokens={reply.prompt_tokens}+{reply.completion_tokens}"
+    )
+
+
 if __name__ == "__main__":
     app()
