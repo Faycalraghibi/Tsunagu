@@ -1,0 +1,13 @@
+{
+  "repo": "langchain-ai/docs",
+  "commit": "23152b1133e7759381661e93bcdca778101a80bc",
+  "n_pages": 47,
+  "n_tokens": 178726,
+  "n_chunks": 732,
+  "mean_chunk_tokens": 252.8,
+  "max_chunk_tokens": 2385,
+  "n_link_edges": 129,
+  "links_external": 99,
+  "links_out_of_corpus": 194,
+  "n_chunks_with_symbols": 505
+}

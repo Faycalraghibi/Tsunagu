@@ -37,5 +37,15 @@ def fetch(config: Path = CONFIG_OPTION, force: bool = False) -> None:
     typer.echo(f"{len(paths)} pages, {total / 1024:.0f} KiB in {s.paths.raw_dir}")
 
 
+@app.command()
+def ingest(config: Path = CONFIG_OPTION) -> None:
+    """Clean, chunk and link the corpus."""
+    from tsunagu.ingest import run_ingest
+
+    stats = run_ingest(_settings(config))
+    for key, value in stats.items():
+        typer.echo(f"{key}: {value}")
+
+
 if __name__ == "__main__":
     app()
