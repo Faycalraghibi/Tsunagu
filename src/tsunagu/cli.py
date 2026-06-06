@@ -47,5 +47,21 @@ def ingest(config: Path = CONFIG_OPTION) -> None:
         typer.echo(f"{key}: {value}")
 
 
+@app.command("check-questions")
+def check_questions(config: Path = CONFIG_OPTION) -> None:
+    """Validate data/questions.jsonl against the corpus (never edits it)."""
+    from tsunagu.questions import load_questions, validate_questions
+    from tsunagu.util import read_jsonl
+
+    s = _settings(config)
+    known = {p["page_path"] for p in read_jsonl(s.paths.processed_dir / "pages.jsonl")}
+    questions = load_questions(s.paths.questions)
+    problems = validate_questions(questions, known)
+    for problem in problems:
+        typer.echo(f"PROBLEM {problem}")
+    typer.echo("OK" if not problems else f"{len(problems)} problem(s)")
+    raise typer.Exit(code=1 if problems else 0)
+
+
 if __name__ == "__main__":
     app()

@@ -1,0 +1,2 @@
+{"id": "q01", "type": "single_fact", "question": "What does a reducer do on a state key?", "gold_answer": "One to three sentences written by the owner.", "gold_pages": ["langgraph/graph-api"], "notes": ""}
+{"id": "q28", "type": "unanswerable", "question": "How do I deploy LangGraph on AWS Bedrock Agents?", "gold_answer": "INSUFFICIENT_CONTEXT: the corpus does not cover it.", "gold_pages": [], "notes": ""}
