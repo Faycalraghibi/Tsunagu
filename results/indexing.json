@@ -1,0 +1,6 @@
+{
+  "dense_index_seconds": 178.4,
+  "embed_model": "BAAI/bge-small-en-v1.5",
+  "n_chunks_indexed": 732,
+  "embedding_dim": 384
+}

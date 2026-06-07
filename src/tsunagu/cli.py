@@ -90,5 +90,18 @@ def smoke(config: Path = CONFIG_OPTION) -> None:
     )
 
 
+@app.command()
+def index(config: Path = CONFIG_OPTION) -> None:
+    """Embed chunks and build the Chroma index."""
+    from tsunagu.embeddings import SentenceTransformerEmbedder
+    from tsunagu.index import build_dense_index
+    from tsunagu.store import ChunkStore
+
+    s = _settings(config)
+    store = ChunkStore.load(s.paths.processed_dir / "chunks.jsonl")
+    facts = build_dense_index(s, store, SentenceTransformerEmbedder(s.retrieval.embed_model))
+    typer.echo(facts)
+
+
 if __name__ == "__main__":
     app()
