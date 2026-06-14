@@ -103,5 +103,50 @@ def index(config: Path = CONFIG_OPTION) -> None:
     typer.echo(facts)
 
 
+@app.command("extract-spike")
+def extract_spike(config: Path = CONFIG_OPTION, n: int = 10) -> None:
+    """Run both extraction backends on n chunks and recommend one (objective rule)."""
+    from typing import Any
+
+    from tsunagu.chunking import load_chunks
+    from tsunagu.extract import build_extractor
+    from tsunagu.llm import build_llm
+    from tsunagu.util import write_json
+
+    s = _settings(config)
+    chunks = [
+        c
+        for c in load_chunks(s.paths.processed_dir / "chunks.jsonl")
+        if c.symbols and c.n_tokens > 150
+    ]
+    picked = chunks[:: max(1, len(chunks) // n)][:n]
+    llm = build_llm(s)
+    rows: list[dict[str, Any]] = []
+    for backend in ("json", "llamaindex"):
+        try:
+            extractor = build_extractor(
+                backend, llm, s.graph.max_triplets_per_chunk, tag=f"spike:{backend}"
+            )
+            counts = [len(extractor.extract(c)) for c in picked]
+            error = ""
+        except Exception as exc:  # spike: report any failure instead of crashing
+            counts, error = [0] * len(picked), repr(exc)
+        rows.append({"backend": backend, "counts": counts, "error": error})
+        typer.echo(f"{backend}: {counts} {error}")
+    json_counts, li_counts = rows[0]["counts"], rows[1]["counts"]
+    json_nonempty = sum(1 for c in json_counts if c > 0)
+    li_misses = sum(1 for j, li in zip(json_counts, li_counts, strict=True) if j > 0 and li == 0)
+    recommend = (
+        "llamaindex"
+        if not rows[1]["error"] and li_misses <= 0.3 * max(1, json_nonempty)
+        else "json"
+    )
+    write_json(
+        s.paths.results_dir / "extraction_spike.json",
+        {"chunks": [c.chunk_id for c in picked], "rows": rows, "recommend": recommend},
+    )
+    typer.echo(f"recommend: {recommend}")
+
+
 if __name__ == "__main__":
     app()
