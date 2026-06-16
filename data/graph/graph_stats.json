@@ -42,5 +42,39 @@
       "DEPRECATED_BY": 81,
       "RETURNS": 422
     }
+  },
+  "after_resolution": {
+    "nodes": 3284,
+    "entities": 3237,
+    "llm_entities": 3100,
+    "nodes_by_type": {
+      "Page": 47,
+      "Function": 468,
+      "Class": 304,
+      "Parameter": 384,
+      "Symbol": 137,
+      "Concept": 1362,
+      "Feature": 582
+    },
+    "edges": 10179,
+    "llm_relations": 5097,
+    "explicit_links": 129,
+    "edges_by_relation": {
+      "MENTIONS": 4953,
+      "LINKS_TO": 129,
+      "USES": 783,
+      "REQUIRES": 1060,
+      "CONFIGURES": 1160,
+      "PART_OF": 1386,
+      "ALTERNATIVE_TO": 210,
+      "DEPRECATED_BY": 79,
+      "RETURNS": 419
+    }
+  },
+  "merges_by_reason": {
+    "normalize": 283,
+    "alias": 28,
+    "symbol_link": 356,
+    "embedding": 266
   }
 }
