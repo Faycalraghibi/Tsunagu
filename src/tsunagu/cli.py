@@ -201,5 +201,54 @@ def build_graph(config: Path = CONFIG_OPTION, limit: int = 0) -> None:
     typer.echo(g.stats())
 
 
+@app.command()
+def resolve(config: Path = CONFIG_OPTION) -> None:
+    """Resolve entities in graph_raw.json; write graph_resolved.json and results/merges.csv."""
+    from collections import Counter
+
+    from tsunagu.embeddings import SentenceTransformerEmbedder
+    from tsunagu.graph import Graph
+    from tsunagu.resolve import load_aliases, resolve_graph, write_merges_csv
+    from tsunagu.util import update_json
+
+    s = _settings(config)
+    raw = Graph.load(s.paths.graph_dir / "graph_raw.json")
+    embedder = SentenceTransformerEmbedder(s.retrieval.embed_model)
+    resolved, merges = resolve_graph(
+        raw, load_aliases(s.paths.aliases), embedder, s.graph.merge_threshold
+    )
+    resolved.save(s.paths.graph_dir / "graph_resolved.json")
+    write_merges_csv(merges, s.paths.results_dir / "merges.csv")
+    by_reason = dict(Counter(m.reason for m in merges))
+    update_json(
+        s.paths.graph_dir / "graph_stats.json",
+        {"after_resolution": resolved.stats(), "merges_by_reason": by_reason},
+    )
+    typer.echo(
+        f"entities {raw.stats()['entities']} -> {resolved.stats()['entities']}; merges {by_reason}"
+    )
+
+
+@app.command("merge-sample")
+def merge_sample(config: Path = CONFIG_OPTION) -> None:
+    """Write the 30-merge review sheet once (never overwrites the owner's answers)."""
+    import csv
+
+    from tsunagu.resolve import Merge, sample_for_review, write_review_csv
+
+    s = _settings(config)
+    target = s.paths.results_dir / "merges_review.csv"
+    if target.exists():
+        typer.echo(f"{target} already exists; not overwriting the owner's review.")
+        raise typer.Exit(code=1)
+    with (s.paths.results_dir / "merges.csv").open(encoding="utf-8") as f:
+        merges = [
+            Merge(r["reason"], r["type"], r["a"], r["b"], float(r["score"]))
+            for r in csv.DictReader(f)
+        ]
+    write_review_csv(sample_for_review(merges), target)
+    typer.echo(f"wrote {target}")
+
+
 if __name__ == "__main__":
     app()
