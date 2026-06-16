@@ -1,0 +1,46 @@
+{
+  "deterministic_only": {
+    "nodes": 569,
+    "entities": 522,
+    "llm_entities": 0,
+    "nodes_by_type": {
+      "Page": 47,
+      "Symbol": 522
+    },
+    "edges": 1188,
+    "llm_relations": 0,
+    "explicit_links": 129,
+    "edges_by_relation": {
+      "MENTIONS": 1059,
+      "LINKS_TO": 129
+    }
+  },
+  "before_resolution": {
+    "nodes": 4217,
+    "entities": 4170,
+    "llm_entities": 3648,
+    "nodes_by_type": {
+      "Page": 47,
+      "Symbol": 522,
+      "Concept": 1667,
+      "Class": 351,
+      "Feature": 652,
+      "Function": 548,
+      "Parameter": 430
+    },
+    "edges": 11313,
+    "llm_relations": 5230,
+    "explicit_links": 129,
+    "edges_by_relation": {
+      "MENTIONS": 5954,
+      "LINKS_TO": 129,
+      "USES": 792,
+      "REQUIRES": 1073,
+      "CONFIGURES": 1173,
+      "PART_OF": 1471,
+      "ALTERNATIVE_TO": 218,
+      "DEPRECATED_BY": 81,
+      "RETURNS": 422
+    }
+  }
+}

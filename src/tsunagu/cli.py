@@ -148,5 +148,58 @@ def extract_spike(config: Path = CONFIG_OPTION, n: int = 10) -> None:
     typer.echo(f"recommend: {recommend}")
 
 
+@app.command("build-graph")
+def build_graph(config: Path = CONFIG_OPTION, limit: int = 0) -> None:
+    """Deterministic skeleton plus LLM triplets for every chunk (cached, resumable)."""
+    import time
+
+    from tsunagu.chunking import load_chunks
+    from tsunagu.extract import build_extractor
+    from tsunagu.graph import add_triplets, build_deterministic_graph, load_link_edges
+    from tsunagu.llm import build_llm
+    from tsunagu.util import read_jsonl, update_json
+
+    s = _settings(config)
+    chunks = load_chunks(s.paths.processed_dir / "chunks.jsonl")
+    pages = read_jsonl(s.paths.processed_dir / "pages.jsonl")
+    g = build_deterministic_graph(
+        pages, chunks, load_link_edges(s.paths.processed_dir / "link_edges.csv")
+    )
+    deterministic = g.stats()
+    extractor = build_extractor(
+        s.graph.extraction_backend, build_llm(s), s.graph.max_triplets_per_chunk
+    )
+    page_of = {c.chunk_id: c.page_path for c in chunks}
+    targets = chunks[:limit] if limit else chunks
+    started = time.perf_counter()
+    kept = empty = 0
+    for i, chunk in enumerate(targets, start=1):
+        triplets = extractor.extract(chunk)
+        kept += len(triplets)
+        empty += not triplets
+        add_triplets(g, triplets, page_of)
+        if i % 25 == 0 or i == len(targets):
+            typer.echo(
+                f"{i}/{len(targets)} chunks, {kept} triplets, {time.perf_counter() - started:.0f}s"
+            )
+    g.save(s.paths.graph_dir / "graph_raw.json")
+    update_json(
+        s.paths.graph_dir / "graph_stats.json",
+        {"deterministic_only": deterministic, "before_resolution": g.stats()},
+    )
+    update_json(
+        s.paths.results_dir / "indexing.json",
+        {
+            "extraction_backend": s.graph.extraction_backend,
+            "extraction_model": s.llm.model,
+            "chunks_extracted": len(targets),
+            "triplets_kept": kept,
+            "chunks_without_triplets": empty,
+            "extraction_wall_seconds_last_run": round(time.perf_counter() - started, 1),
+        },
+    )
+    typer.echo(g.stats())
+
+
 if __name__ == "__main__":
     app()
