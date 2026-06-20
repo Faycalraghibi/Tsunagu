@@ -250,5 +250,36 @@ def merge_sample(config: Path = CONFIG_OPTION) -> None:
     typer.echo(f"wrote {target}")
 
 
+@app.command()
+def ask(
+    question: str,
+    system: str = "graph",
+    show_path: bool = typer.Option(False, "--show-path", help="Print graph seeds and edges."),
+    config: Path = CONFIG_OPTION,
+) -> None:
+    """Answer one question with one system."""
+    from tsunagu.answer import answer_question
+    from tsunagu.llm import build_llm
+    from tsunagu.systems import Resources, build_retriever
+
+    s = _settings(config)
+    result = build_retriever(system, s, Resources(s)).retrieve(question, s.retrieval.top_k)
+    if show_path and result.trace:
+        typer.echo("Seeds:")
+        for nid, how, score in result.trace["seeds"]:
+            typer.echo(f"  {nid}  ({how}, {score:.2f})")
+        typer.echo(f"Edges traversed (first 30 of {len(result.trace['edges'])}):")
+        for src, rel, dst, hop in result.trace["edges"][:30]:
+            typer.echo(f"  hop {hop}: {src} -{rel}-> {dst}")
+        typer.echo(
+            f"Candidate pool: {result.trace['pool_size']} chunks, dense fallback: {result.trace['fallback']}"
+        )
+    typer.echo("Retrieved:")
+    for c in result.chunks:
+        typer.echo(f"  {c.score:.3f}  {c.label}")
+    ans = answer_question(build_llm(s), question, result.chunks, tag=f"ask:{system}")
+    typer.echo(f"\nAnswer: {ans.answer}\nCitations: {ans.citations}\nAbstained: {ans.abstained}")
+
+
 if __name__ == "__main__":
     app()
