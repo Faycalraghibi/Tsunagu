@@ -281,5 +281,55 @@ def ask(
     typer.echo(f"\nAnswer: {ans.answer}\nCitations: {ans.citations}\nAbstained: {ans.abstained}")
 
 
+@app.command("eval")
+def eval_cmd(
+    config: Path = CONFIG_OPTION,
+    systems: str = typer.Option("", help="Comma-separated; default from config.yaml."),
+    repeats: int = typer.Option(0, help="Default from config.yaml."),
+    retrieval_only: bool = typer.Option(False, "--retrieval-only"),
+    limit: int = typer.Option(0, help="Only the first N questions (debugging)."),
+) -> None:
+    """Evaluate systems on the owner's questions."""
+    import hashlib
+
+    from tsunagu.llm import build_llm
+    from tsunagu.questions import load_questions
+    from tsunagu.runner import merge_rows, run_eval, write_rows
+    from tsunagu.systems import Resources, build_retriever
+    from tsunagu.util import read_json, read_jsonl, write_json
+
+    s = _settings(config)
+    names = [n.strip() for n in systems.split(",") if n.strip()] or s.evaluation.systems
+    reps = repeats or s.evaluation.repeats
+    digest = hashlib.sha256(s.paths.questions.read_bytes()).hexdigest()
+    lock = s.paths.results_dir / "questions_lock.json"
+    if not lock.exists():
+        write_json(lock, {"sha256": digest})
+    elif read_json(lock)["sha256"] != digest:
+        typer.echo(
+            "WARNING: data/questions.jsonl changed since the first eval run. Tell the owner; results.md will show it."
+        )
+    questions = load_questions(s.paths.questions)
+    if limit:
+        questions = questions[:limit]
+    res = Resources(s)
+    retrievers = {n: build_retriever(n, s, res) for n in names}
+    llm = None if retrieval_only else build_llm(s)
+    rows = run_eval(
+        questions,
+        retrievers,
+        llm,
+        repeats=reps,
+        k=s.retrieval.top_k,
+        retrieval_only=retrieval_only,
+        log=typer.echo,
+    )
+    stem = "retrieval_rows" if retrieval_only else "eval_rows"
+    target = s.paths.results_dir / f"{stem}.jsonl"
+    old = read_jsonl(target) if target.exists() else []
+    write_rows(merge_rows(old, rows), s.paths.results_dir, stem=stem)
+    typer.echo(f"wrote {len(rows)} rows to {target}")
+
+
 if __name__ == "__main__":
     app()
