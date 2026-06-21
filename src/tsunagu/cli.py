@@ -331,5 +331,38 @@ def eval_cmd(
     typer.echo(f"wrote {len(rows)} rows to {target}")
 
 
+@app.command("calib-sample")
+def calib_sample(config: Path = CONFIG_OPTION) -> None:
+    """Write the blind 20-answer label sheet (never overwrites existing labels)."""
+    from tsunagu.calibration import make_blind_sample, write_csv
+    from tsunagu.util import read_jsonl
+
+    s = _settings(config)
+    if s.paths.labels.exists():
+        typer.echo(f"{s.paths.labels} already exists; not overwriting the owner's labels.")
+        raise typer.Exit(code=1)
+    labels, key = make_blind_sample(read_jsonl(s.paths.results_dir / "eval_rows.jsonl"))
+    write_csv(labels, s.paths.labels)
+    write_csv(key, s.paths.results_dir / "calibration_key.csv")
+    typer.echo(f"wrote {len(labels)} items to {s.paths.labels}")
+
+
+@app.command()
+def calib(config: Path = CONFIG_OPTION) -> None:
+    """Agreement and Cohen's kappa between the owner's labels and the judge."""
+    from tsunagu.calibration import compute_calibration
+    from tsunagu.util import read_jsonl, write_json
+
+    s = _settings(config)
+    rows = read_jsonl(s.paths.results_dir / "eval_rows.jsonl")
+    result = compute_calibration(s.paths.labels, s.paths.results_dir / "calibration_key.csv", rows)
+    write_json(s.paths.results_dir / "calibration.json", result)
+    typer.echo({k: v for k, v in result.items() if k != "disagreements"})
+    if result.get("n", 0) and result["kappa"] < 0.6:
+        typer.echo(
+            "kappa < 0.6: do NOT trust the judge yet. Stop and report to the owner (Task 27 Step 4)."
+        )
+
+
 if __name__ == "__main__":
     app()
