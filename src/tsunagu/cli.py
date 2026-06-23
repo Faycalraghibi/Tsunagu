@@ -364,5 +364,40 @@ def calib(config: Path = CONFIG_OPTION) -> None:
         )
 
 
+@app.command()
+def report(config: Path = CONFIG_OPTION) -> None:
+    """Regenerate the AUTO block of results/results.md and results/observations.md."""
+    import hashlib
+
+    from tsunagu.llm import usage_by_stage
+    from tsunagu.report import header_section, observations, render_auto, write_results
+    from tsunagu.resolve import read_review
+    from tsunagu.util import read_json, read_jsonl
+
+    s = _settings(config)
+    r = s.paths.results_dir
+    rows = read_jsonl(r / "eval_rows.jsonl")
+    review_path = r / "merges_review.csv"
+    lock = r / "questions_lock.json"
+    changed = (
+        lock.exists()
+        and read_json(lock)["sha256"] != hashlib.sha256(s.paths.questions.read_bytes()).hexdigest()
+    )
+    header = header_section(
+        read_json(s.paths.processed_dir / "corpus_stats.json"),
+        read_json(s.paths.graph_dir / "graph_stats.json"),
+        read_json(r / "indexing.json"),
+        usage_by_stage(s.paths.cache_dir),
+        read_review(review_path) if review_path.exists() else None,
+        changed,
+    )
+    calib = read_json(r / "calibration.json") if (r / "calibration.json").exists() else None
+    repeats = max((row["repeat"] for row in rows), default=0) + 1
+    write_results(r / "results.md", render_auto(rows, header, calib, repeats))
+    systems = list(dict.fromkeys(row["system"] for row in rows))
+    (r / "observations.md").write_text(observations(rows, systems), encoding="utf-8")
+    typer.echo(f"updated {r / 'results.md'} and {r / 'observations.md'}")
+
+
 if __name__ == "__main__":
     app()
