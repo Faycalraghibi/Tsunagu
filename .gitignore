@@ -12,3 +12,4 @@ tsunagu-venv/
 index/
 *.log
 .DS_Store
+.coverage
