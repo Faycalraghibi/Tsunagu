@@ -1,4 +1,4 @@
-"""Retriever C: seed entities, expand along the graph, rank reached chunks by dense similarity."""
+"""Retriever C: seed entities, expand along the graph, rank reached chunks by similarity and hop."""
 
 from __future__ import annotations
 
@@ -17,6 +17,8 @@ from tsunagu.store import ChunkStore
 
 CODE_SPAN_RE = re.compile(r"`([^`]+)`")
 WORD_RE = re.compile(r"[A-Za-z0-9_\-]+")
+PLAIN_WORD_RE = re.compile(r"[a-z]+")
+CODE_TYPES = frozenset({"Symbol", "Class", "Function", "Parameter"})
 STOPWORDS = {
     "how",
     "what",
@@ -69,6 +71,19 @@ def query_terms(query: str) -> set[str]:
     return terms
 
 
+def plain_words(query: str) -> set[str]:
+    """Normalised lowercase dictionary-like words written outside code spans."""
+    prose = CODE_SPAN_RE.sub(" ", query)
+    return {normalize_name(w) for w in WORD_RE.findall(prose) if PLAIN_WORD_RE.fullmatch(w)}
+
+
+def rank_pool(
+    pool: dict[str, int], scores: dict[str, float], k: int, hop_penalty: float
+) -> list[str]:
+    """Top `k` chunk ids by similarity minus `hop_penalty` per hop; ties go to the smaller id."""
+    return sorted(pool, key=lambda cid: (-(scores[cid] - hop_penalty * pool[cid]), cid))[:k]
+
+
 class GraphRetriever:
     def __init__(
         self,
@@ -84,6 +99,9 @@ class GraphRetriever:
         seed_vector_k: int = 5,
         seed_min_sim: float = 0.6,
         max_expand_degree: int = 40,
+        hub_max_chunks: int | None = None,
+        hop_penalty: float = 0.0,
+        code_only_single_words: bool = False,
         name: str = "graph",
     ) -> None:
         self.graph = graph
@@ -98,7 +116,21 @@ class GraphRetriever:
         self.seed_vector_k = seed_vector_k
         self.seed_min_sim = seed_min_sim
         self.max_expand_degree = max_expand_degree
+        self.hop_penalty = hop_penalty
+        self.code_only_single_words = code_only_single_words
         self.name = name
+        # Entities mentioned in more than `hub_max_chunks` chunks carry little signal and
+        # connect most of the corpus, so they are neither seeds nor traversed. Pages are
+        # routing nodes for LINKS_TO and are never hubs.
+        self.hubs: set[str] = (
+            {
+                n.id
+                for n in graph.nodes.values()
+                if n.type != "Page" and len(n.chunk_ids) > hub_max_chunks
+            }
+            if hub_max_chunks is not None
+            else set()
+        )
         self.name_index: dict[str, list[str]] = defaultdict(list)
         for node in graph.nodes.values():
             if node.type == "Page":
@@ -109,12 +141,18 @@ class GraphRetriever:
     def find_seeds(self, query: str, q_vec: np.ndarray) -> list[tuple[str, str, float]]:
         """Seeds as (node_id, how, score): exact name matches first, then vector matches."""
         seeds: dict[str, tuple[str, float]] = {}
+        code_terms = {normalize_name(m.group(1)) for m in CODE_SPAN_RE.finditer(query)}
+        plain = plain_words(query) - code_terms if self.code_only_single_words else set()
         for term in sorted(query_terms(query)):
             for nid in self.name_index.get(term, []):
+                if nid in self.hubs:
+                    continue
+                if term in plain and self.graph.nodes[nid].type not in CODE_TYPES:
+                    continue
                 seeds.setdefault(nid, ("name", 1.0))
         sims = self.node_matrix @ q_vec
         for i in np.argsort(-sims)[: self.seed_vector_k]:
-            if sims[i] >= self.seed_min_sim:
+            if sims[i] >= self.seed_min_sim and self.node_ids[i] not in self.hubs:
                 seeds.setdefault(self.node_ids[i], ("vector", float(sims[i])))
         return [(nid, how, score) for nid, (how, score) in seeds.items()]
 
@@ -129,7 +167,9 @@ class GraphRetriever:
             next_frontier: list[str] = []
             for nid in frontier:
                 neighbours = [
-                    (e, o) for e, o in self.graph.neighbors(nid, self.relations) if o not in hop_of
+                    (e, o)
+                    for e, o in self.graph.neighbors(nid, self.relations)
+                    if o not in hop_of and o not in self.hubs
                 ]
                 neighbours.sort(key=lambda eo: -self._node_sim(eo[1], q_vec))
                 for edge, other in neighbours[: self.max_expand_degree]:
@@ -156,7 +196,8 @@ class GraphRetriever:
                 if cid in self.store.position:
                     pool[cid] = min(pool.get(cid, hop), hop)
         scores = self.chunk_matrix @ q_vec
-        ranked = sorted(pool, key=lambda cid: -scores[self.store.position[cid]])[:k]
+        pool_scores = {cid: float(scores[self.store.position[cid]]) for cid in pool}
+        ranked = rank_pool(pool, pool_scores, k, self.hop_penalty)
         fallback = 0
         if len(ranked) < k:
             for i in np.argsort(-scores):

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import numpy as np
+
 from tsunagu.chunking import Chunk
 from tsunagu.embeddings import HashEmbedder
 from tsunagu.graph import ALL_RELATIONS, build_deterministic_graph
-from tsunagu.graph_retriever import GraphRetriever, query_terms
+from tsunagu.graph_retriever import GraphRetriever, query_terms, rank_pool
 from tsunagu.store import ChunkStore
 
 PAGES = [
@@ -77,3 +79,48 @@ def test_without_links_linked_page_is_unreachable() -> None:
     relations = set(ALL_RELATIONS) - {"LINKS_TO"}
     result = _retriever(relations=relations).retrieve("How do I use `InMemorySaver`?", k=2)
     assert {c.chunk_id for c in result.chunks} == {"a::000", "a::001"}
+
+
+def test_rank_pool_hop_penalty_prefers_chunks_near_seeds() -> None:
+    pool = {"near": 0, "far": 1}
+    scores = {"near": 0.50, "far": 0.52}
+    assert rank_pool(pool, scores, k=2, hop_penalty=0.0) == ["far", "near"]
+    assert rank_pool(pool, scores, k=2, hop_penalty=0.05) == ["near", "far"]
+
+
+def test_rank_pool_breaks_ties_by_chunk_id() -> None:
+    assert rank_pool({"b": 0, "a": 0}, {"a": 0.5, "b": 0.5}, k=2, hop_penalty=0.0) == ["a", "b"]
+
+
+def test_hub_entities_are_not_seeded_or_expanded() -> None:
+    # InMemorySaver appears in 1 chunk; with hub_max_chunks=0 it counts as a hub.
+    result = _retriever(hub_max_chunks=0).retrieve("How do I use `InMemorySaver`?", k=3)
+    assert result.trace["seeds"] == []
+    assert result.trace["pool_size"] == 0 and result.trace["fallback"] == 3
+
+
+def test_pages_are_never_hubs() -> None:
+    retriever = _retriever(hub_max_chunks=0)
+    assert not any(nid.startswith("Page:") for nid in retriever.hubs)
+
+
+def test_plain_single_word_only_seeds_code_entities() -> None:
+    retriever = _retriever(code_only_single_words=True)
+    retriever.graph.add_node("checkpoint", "Concept", chunk_id="a::001")
+    retriever.name_index["checkpoint"].append("Concept:checkpoint")
+    seeds = {nid for nid, _, _ in retriever.find_seeds("Where are checkpoints?", _zero())}
+    assert "Concept:checkpoint" not in seeds
+    seeds = {nid for nid, _, _ in retriever.find_seeds("Where are `checkpoints`?", _zero())}
+    assert "Concept:checkpoint" in seeds
+
+
+def test_plain_single_word_filter_is_off_by_default() -> None:
+    retriever = _retriever()
+    retriever.graph.add_node("checkpoint", "Concept", chunk_id="a::001")
+    retriever.name_index["checkpoint"].append("Concept:checkpoint")
+    seeds = {nid for nid, _, _ in retriever.find_seeds("Where are checkpoints?", _zero())}
+    assert "Concept:checkpoint" in seeds
+
+
+def _zero() -> np.ndarray:
+    return np.zeros(HashEmbedder().embed_query("x").shape, dtype=np.float32)

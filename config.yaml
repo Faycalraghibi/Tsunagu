@@ -81,6 +81,12 @@ graph:
   seed_vector_k: 5
   seed_min_sim: 0.6
   max_expand_degree: 40
+  # Revision 2 (2026-10-22, after the first retrieval run): v1 reached 630 to 732 of 732
+  # chunks and returned dense's top 8 on 29/30 questions. Values chosen from corpus
+  # statistics before re-running; see design doc fact 6. Null / 0.0 / false = v1.
+  hub_chunk_frac: 0.02          # entity in more than 2% of chunks (14) = hub
+  hop_penalty: 0.05             # similarity cost per hop from the seeds
+  code_only_single_words: true  # a plain one-word match only seeds code entities
 
 evaluation:
   repeats: 3

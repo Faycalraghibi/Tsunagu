@@ -49,6 +49,9 @@ class GraphConfig(BaseModel):
     seed_vector_k: int = 5
     seed_min_sim: float = 0.6
     max_expand_degree: int = 40
+    hub_chunk_frac: float | None = None  # None keeps every entity traversable
+    hop_penalty: float = 0.0
+    code_only_single_words: bool = False
 
 
 class EvalConfig(BaseModel):

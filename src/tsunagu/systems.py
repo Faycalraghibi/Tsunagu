@@ -99,5 +99,10 @@ def build_retriever(name: str, settings: Settings, res: Resources) -> Retriever:
             seed_vector_k=g.seed_vector_k,
             seed_min_sim=g.seed_min_sim,
             max_expand_degree=g.max_expand_degree,
+            hub_max_chunks=(
+                int(g.hub_chunk_frac * len(res.store.ids)) if g.hub_chunk_frac is not None else None
+            ),
+            hop_penalty=g.hop_penalty,
+            code_only_single_words=g.code_only_single_words,
         )
     raise ValueError(f"unknown system {name}; known: {', '.join(SYSTEMS)}")
