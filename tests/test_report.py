@@ -6,7 +6,9 @@ from typing import Any
 from tsunagu.report import (
     AUTO_END,
     AUTO_START,
+    auto_to_latex,
     correctness_section,
+    latex_escape,
     observations,
     question_outcomes,
     retrieval_section,
@@ -158,3 +160,31 @@ paths:
     obs_md = results_dir / "observations.md"
     assert obs_md.exists()
     assert "# Observations" in obs_md.read_text(encoding="utf-8")
+
+
+def test_latex_escape_special_characters() -> None:
+    assert latex_escape("4/7 = 57% [25%, 84%]") == r"4/7 = 57\% [25\%, 84\%]"
+    assert latex_escape("single_fact & {x} #1") == r"single\_fact \& \{x\} \#1"
+    assert latex_escape("@ `23152b1133e7`") == r"@ \texttt{23152b1133e7}"
+
+
+def test_auto_to_latex_converts_headings_tables_and_paragraphs() -> None:
+    md = (
+        "Corpus: 47 pages\n\n"
+        "### Retrieval (hit@8)\n\n"
+        "| Type | dense | graph |\n|---|---|---|\n| single_fact (n=7) | 1.00 | 0.93 |"
+    )
+    tex = auto_to_latex(md)
+    assert "Corpus: 47 pages" in tex
+    assert r"\subsection*{Retrieval (hit@8)}" in tex
+    assert r"\begin{tabular}{lrr}" in tex
+    assert r"Type & dense & graph \\" in tex
+    assert r"single\_fact (n=7) & 1.00 & 0.93 \\" in tex
+    assert tex.count(r"\midrule") == 1
+
+
+def test_auto_to_latex_turns_bullets_into_itemize_and_drops_h1() -> None:
+    tex = auto_to_latex("# Observations\n\n- a: 71%.\n- b.")
+    assert "Observations" not in tex
+    expected = [r"\begin{itemize}", r"\item a: 71\%.", r"\item b.", r"\end{itemize}"]
+    assert tex.strip() == "\n".join(expected)

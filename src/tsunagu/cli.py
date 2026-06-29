@@ -366,11 +366,17 @@ def calib(config: Path = CONFIG_OPTION) -> None:
 
 @app.command()
 def report(config: Path = CONFIG_OPTION) -> None:
-    """Regenerate the AUTO block of results/results.md and results/observations.md."""
+    """Regenerate results.md (AUTO block), observations.md and their LaTeX copies."""
     import hashlib
 
     from tsunagu.llm import usage_by_stage
-    from tsunagu.report import header_section, observations, render_auto, write_results
+    from tsunagu.report import (
+        auto_to_latex,
+        header_section,
+        observations,
+        render_auto,
+        write_results,
+    )
     from tsunagu.resolve import read_review
     from tsunagu.util import read_json, read_jsonl
 
@@ -393,10 +399,15 @@ def report(config: Path = CONFIG_OPTION) -> None:
     )
     calib = read_json(r / "calibration.json") if (r / "calibration.json").exists() else None
     repeats = max((row["repeat"] for row in rows), default=0) + 1
-    write_results(r / "results.md", render_auto(rows, header, calib, repeats))
+    auto_md = render_auto(rows, header, calib, repeats)
+    write_results(r / "results.md", auto_md)
     systems = list(dict.fromkeys(row["system"] for row in rows))
-    (r / "observations.md").write_text(observations(rows, systems), encoding="utf-8")
-    typer.echo(f"updated {r / 'results.md'} and {r / 'observations.md'}")
+    obs_md = observations(rows, systems)
+    (r / "observations.md").write_text(obs_md, encoding="utf-8")
+    # Same numbers for docs/report/tsunagu.tex, converted, never typed by hand.
+    (r / "results_auto.tex").write_text(auto_to_latex(auto_md), encoding="utf-8")
+    (r / "observations.tex").write_text(auto_to_latex(obs_md), encoding="utf-8")
+    typer.echo(f"updated {r / 'results.md'}, {r / 'observations.md'} and the .tex copies")
 
 
 if __name__ == "__main__":

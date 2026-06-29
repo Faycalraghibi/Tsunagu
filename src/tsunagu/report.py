@@ -304,3 +304,60 @@ def write_results(path: Path, auto_md: str) -> None:
             return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("# Tsunagu results\n\n" + block + MANUAL_TEMPLATE, encoding="utf-8")
+
+
+LATEX_SPECIALS = {
+    "\\": r"\textbackslash{}",
+    "&": r"\&",
+    "%": r"\%",
+    "$": r"\$",
+    "#": r"\#",
+    "_": r"\_",
+    "{": r"\{",
+    "}": r"\}",
+    "~": r"\textasciitilde{}",
+    "^": r"\textasciicircum{}",
+}
+
+
+def latex_escape(text: str) -> str:
+    """Escape LaTeX special characters; `code` spans become \texttt."""
+    parts = text.split("`")
+    out = []
+    for i, part in enumerate(parts):
+        escaped = "".join(LATEX_SPECIALS.get(ch, ch) for ch in part)
+        out.append(rf"\texttt{{{escaped}}}" if i % 2 else escaped)
+    return "".join(out)
+
+
+def _table_to_latex(lines: list[str]) -> str:
+    rows = [[cell.strip() for cell in line.strip().strip("|").split("|")] for line in lines]
+    header, body = rows[0], rows[2:]
+    spec = "l" + "r" * (len(header) - 1)
+    out = [r"\begin{center}", rf"\begin{{tabular}}{{{spec}}}", r"\toprule"]
+    out.append(" & ".join(latex_escape(c) for c in header) + r" \\")
+    out.append(r"\midrule")
+    out += [" & ".join(latex_escape(c) for c in row) + r" \\" for row in body]
+    out += [r"\bottomrule", r"\end{tabular}", r"\end{center}"]
+    return "\n".join(out)
+
+
+def auto_to_latex(auto_md: str) -> str:
+    """Convert generated Markdown (paragraphs, headings, bullets, tables) to LaTeX."""
+    blocks = []
+    for block in auto_md.strip().split("\n\n"):
+        lines = block.strip().splitlines()
+        if not lines:
+            continue
+        if lines[0].startswith("# "):
+            continue
+        if lines[0].startswith("- "):
+            items = [rf"\item {latex_escape(line[2:])}" for line in lines]
+            blocks.append("\n".join([r"\begin{itemize}", *items, r"\end{itemize}"]))
+        elif lines[0].startswith("### "):
+            blocks.append(rf"\subsection*{{{latex_escape(lines[0][4:])}}}")
+        elif lines[0].startswith("|"):
+            blocks.append(_table_to_latex(lines))
+        else:
+            blocks.append(latex_escape(" ".join(lines)))
+    return "\n\n".join(blocks) + "\n"
