@@ -1,0 +1,78 @@
+Corpus: LangGraph docs @ \texttt{23152b1133e7}, 47 pages, 178726 tokens (cl100k), 732 chunks
+
+Graph: 4170 entities before / 3237 after resolution (3648 LLM entities before, 3100 after), 5097 LLM relations, 129 explicit links; merges \{'normalize': 283, 'alias': 28, 'symbol\_link': 356, 'embedding': 266\}; false merges found: 13/30 reviewed
+
+Indexing: 629244 LLM tokens over 751 extraction calls, 67.7 min of LLM time (extraction model: nvidia/nemotron-3.5-lightning-30b-a3b, backend: json); dense index 178.4 s (BAAI/bge-small-en-v1.5); chunks without triplets: 49/732
+
+\subsection*{Retrieval (hit@8 / recall@8 / MRR, page level)}
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Type & dense & hybrid & graph \\
+\midrule
+single\_fact (n=7) & 1.00 / 1.00 / 0.93 & 1.00 / 1.00 / 1.00 & 1.00 / 1.00 / 0.93 \\
+multi\_hop (n=8) & 1.00 / 0.79 / 0.94 & 1.00 / 0.85 / 1.00 & 1.00 / 0.85 / 0.85 \\
+relational (n=8) & 1.00 / 0.88 / 0.94 & 1.00 / 0.88 / 1.00 & 1.00 / 0.94 / 0.94 \\
+exact\_reference (n=4) & 1.00 / 1.00 / 0.67 & 1.00 / 1.00 / 0.50 & 0.75 / 0.62 / 0.46 \\
+all (n=27) & 1.00 / 0.90 / 0.90 & 1.00 / 0.92 / 0.93 & 0.96 / 0.88 / 0.84 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Correctness (judge score 2 in a majority of repeats), 95\% Wilson CI, n = questions}
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Type & dense & hybrid & graph \\
+\midrule
+single\_fact & 4/7 = 57\% [25\%, 84\%] & 5/7 = 71\% [36\%, 92\%] & 5/7 = 71\% [36\%, 92\%] \\
+multi\_hop & 6/8 = 75\% [41\%, 93\%] & 6/8 = 75\% [41\%, 93\%] & 5/8 = 62\% [31\%, 86\%] \\
+relational & 6/8 = 75\% [41\%, 93\%] & 4/8 = 50\% [22\%, 78\%] & 6/8 = 75\% [41\%, 93\%] \\
+exact\_reference & 4/4 = 100\% [51\%, 100\%] & 4/4 = 100\% [51\%, 100\%] & 3/4 = 75\% [30\%, 95\%] \\
+unanswerable & 1/3 = 33\% [6\%, 79\%] & 1/3 = 33\% [6\%, 79\%] & 2/3 = 67\% [21\%, 94\%] \\
+answerable & 20/27 = 74\% [55\%, 87\%] & 19/27 = 70\% [52\%, 84\%] & 19/27 = 70\% [52\%, 84\%] \\
+all & 21/30 = 70\% [52\%, 83\%] & 20/30 = 67\% [49\%, 81\%] & 21/30 = 70\% [52\%, 83\%] \\
+mean score (0 to 2) & 1.66 & 1.61 & 1.61 \\
+repeat stability & 90\% & 87\% & 83\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Faithfulness, citation precision, abstention (pooled over repeats)}
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Metric & dense & hybrid & graph \\
+\midrule
+faithfulness (supported claims) & 662/662 = 100\% & 715/718 = 100\% & 607/609 = 100\% \\
+citation precision & 119/131 = 91\% & 120/131 = 92\% & 116/127 = 91\% \\
+correct abstention (unanswerable) & 44\% & 44\% & 56\% \\
+false abstention (answerable) & 0\% & 0\% & 0\% \\
+JSON parse failures & 0 & 0 & 0 \\
+judge unparseable & 0 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Latency and tokens per query}
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Metric & dense & hybrid & graph \\
+\midrule
+retrieval p50 / p95 (ms) & 51 / 173 & 62 / 90 & 60 / 254 \\
+end-to-end p50 / p95 (s) & 2.1 / 8.3 & 2.4 / 6.5 & 2.2 / 6.8 \\
+answer tokens per query (in + out) & 4910 & 5312 & 4822 \\
+graph candidate pool (mean chunks) & n/a & n/a & 627 \\
+graph dense fallback (chunks, total) & n/a & n/a & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Judge calibration: PENDING (data/labels\_manual.csv not labelled yet).
+
+Statistics: 30 questions, 3 repeat(s) per system. With about 30 questions, differences under about 15 points are probably noise; per-type n is 3 to 8, so per-type rates are indicative only.

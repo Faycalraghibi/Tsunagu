@@ -13,3 +13,10 @@ index/
 *.log
 .DS_Store
 .coverage
+
+# LaTeX build files
+docs/report/*.aux
+docs/report/*.fls
+docs/report/*.fdb_latexmk
+docs/report/*.out
+docs/report/*.toc
