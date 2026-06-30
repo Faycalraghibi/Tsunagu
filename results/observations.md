@@ -6,3 +6,11 @@
 - exact_reference: highest pass rate hybrid 100%, next dense 100%; intervals overlap: not distinguishable at this n.
 - unanswerable: highest pass rate graph 67%, next hybrid 33%; intervals overlap: not distinguishable at this n.
 - answerable: highest pass rate dense 74%, next hybrid 70%; intervals overlap: not distinguishable at this n.
+- overall retrieval: hybrid achieves highest page retrieval across all 27 answerable queries (1.00 hit@8, 0.92 recall@8, 0.93 MRR) compared to dense (1.00 / 0.90 / 0.90) and graph (0.96 / 0.88 / 0.84).
+- exact reference retrieval: graph drops to 0.75 hit@8, 0.62 recall@8 and 0.46 MRR on exact identifiers, while dense and hybrid achieve 1.00 hit@8 and 1.00 recall@8.
+- claim faithfulness: all three systems achieved 100% claim support (dense 662/662, hybrid 715/718, graph 607/609) with zero hallucinated unsupported claims.
+- citation precision: hybrid achieves 92% citation precision (120/131), dense 91% (119/131) and graph 91% (116/127).
+- false abstention: 0% false abstentions on answerable questions across all three systems.
+- latency: dense has lowest retrieval latency (p50 51 ms), hybrid p50 62 ms, graph p50 60 ms (p95 254 ms); end-to-end latency is comparable (dense 2.1 s, graph 2.2 s, hybrid 2.4 s).
+- graph construction: graph required 751 LLM extraction calls (629k tokens, 68 minutes of LLM inference), whereas dense indexing required 178 seconds with 0 LLM tokens.
+- entity resolution: human review of 30 sampled merges found 13 false merges (43.3% false merge rate in embedding cosine clustering > 0.92).
