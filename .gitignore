@@ -20,3 +20,6 @@ docs/report/*.fls
 docs/report/*.fdb_latexmk
 docs/report/*.out
 docs/report/*.toc
+
+# Local working documents (spec, plan, design, report)
+docs/
